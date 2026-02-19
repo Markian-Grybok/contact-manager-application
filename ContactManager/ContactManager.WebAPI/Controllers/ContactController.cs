@@ -15,13 +15,21 @@ public class ContactController : Controller
 
     public ContactController(IContactRepository repository, ICsvService csvService, IMapper mapper) =>
         (_repository, _csvService, _mapper) = (repository, csvService, mapper);
-    
+
     public async Task<IActionResult> Index()
     {
-        var contacts = await _repository.GetAllAsync();
-        var contactsResponse = _mapper.Map<List<ContactResponse>>(contacts);
+        try
+        {
+            var contacts = await _repository.GetAllAsync();
 
-        return View(contactsResponse);
+            return View(_mapper.Map<List<ContactResponse>>(contacts));
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
+
+            return View(new List<ContactResponse>());
+        }
     }
 
     [HttpGet]
@@ -31,30 +39,33 @@ public class ContactController : Controller
         if (contact is null)
         {
             TempData["Error"] = $"Contact with ID {id} not found.";
-            return RedirectToAction("Index");
+
+            return RedirectToAction(nameof(Index));
         }
 
-        var contactEditViewModel = _mapper.Map<ContactEditViewModel>(contact);
-
-        return View(contactEditViewModel);
+        return View(_mapper.Map<ContactEditViewModel>(contact));
     }
 
     [HttpPost]
-    public async Task<IActionResult> Edit(ContactEditViewModel contactEditViewModel)
+    public async Task<IActionResult> Edit(ContactEditViewModel model)
     {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }    
+
         try
         {
-            var contact = _mapper.Map<Contacts>(contactEditViewModel);
-
-            _repository.Update(contact);
-
+            _repository.Update(_mapper.Map<Contacts>(model));
             TempData["Success"] = "Contact updated successfully!";
-            return RedirectToAction("Index");
+
+            return RedirectToAction(nameof(Index));
         }
         catch (Exception ex)
         {
-            TempData["Error"] = ex.Message;
-            return View(contactEditViewModel);
+            ModelState.AddModelError(string.Empty, ex.Message);
+
+            return View(model);
         }
     }
 
@@ -66,32 +77,24 @@ public class ContactController : Controller
     {
         try
         {
-            if (file == null || file.Length == 0)
+            var result = await _csvService.ParseContactsAsync(file);
+            if (result.IsFailed)
             {
-                TempData["Error"] = "Please select a valid file.";
-                return RedirectToAction("Upload");
+                ViewBag.Error = string.Join("; ", result.Errors.Select(e => e.Message));
+                return View();
             }
 
-            if (!file.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
-            {
-                TempData["Error"] = "File must be a CSV file.";
-                return RedirectToAction("Upload");
-            }
+            await _repository.CreateRangeAsync(_mapper.Map<List<Contacts>>(result.Value));
+            TempData["Success"] = $"{result.Value.Count} contacts imported successfully!";
 
-            List<ContactCreateViewModel> contactsRequest = await _csvService.ParseContactsAsync(file);
-
-            List<Contacts> contacts = _mapper.Map<List<Contacts>>(contactsRequest);
-
-            await _repository.CreateRangeAsync(contacts);
-
-            TempData["Success"] = $"{contacts.Count} contacts imported successfully!";
+            return RedirectToAction(nameof(Index));
         }
         catch (Exception ex)
         {
-            TempData["Error"] = ex.Message;
-        }
+            ModelState.AddModelError(nameof(file), ex.Message);
 
-        return RedirectToAction("Index");
+            return View();
+        }
     }
 
     public async Task<IActionResult> Delete(int id)
@@ -102,11 +105,11 @@ public class ContactController : Controller
             if (contact is null)
             {
                 TempData["Error"] = $"Contact with ID {id} not found.";
-                return RedirectToAction("Index");
+
+                return RedirectToAction(nameof(Index));
             }
 
             _repository.Delete(contact);
-
             TempData["Success"] = "Contact deleted successfully!";
         }
         catch (Exception ex)
@@ -114,7 +117,7 @@ public class ContactController : Controller
             TempData["Error"] = ex.Message;
         }
 
-        return RedirectToAction("Index");
+        return RedirectToAction(nameof(Index));
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

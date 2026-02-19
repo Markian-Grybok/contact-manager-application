@@ -1,20 +1,18 @@
-﻿using Microsoft.AspNetCore.Builder;
-
-namespace ContactManager.WebAPI.Configuration;
+﻿namespace ContactManager.WebAPI.Configuration;
 
 public static class ApplicationBuilderExtensions
 {
     public static IApplicationBuilder UseCoreConfiguration(this WebApplication app)
     {
-        app.UseExceptionHandler("/Home/Error");
+        app.UseExceptionHandler("/Contact/Error");
+        app.UseStatusCodePagesWithReExecute("/Contact/Error");
 
         app.UseHsts();
-
         app.UseHttpsRedirection();
+
         app.UseRouting();
 
         app.UseAuthorization();
-
         app.MapStaticAssets();
 
         app.MapControllerRoute(

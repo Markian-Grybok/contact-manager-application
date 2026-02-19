@@ -31,7 +31,6 @@ public static class ServiceCollectionExtensions
             options.UseSqlServer(configuration.GetConnectionString("DataBaseConnection")));
 
         services.AddScoped<IContactRepository, ContactRepository>();
-        
         services.AddScoped<ICsvService, CsvService>();
 
         return services;

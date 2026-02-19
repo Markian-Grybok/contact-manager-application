@@ -4,22 +4,21 @@
     ViewData["Title"] = "Upload";
 }
 
-<h1>Upload</h1>
+<h1>Upload Contacts from CSV</h1>
 
-<h4>Contact</h4>
+<h4>Import from CSV File</h4>
 <hr />
 
 <form asp-action="Upload" method="post" enctype="multipart/form-data">
     <div class="mb-3">
-        <label>Select CSV file</label>
-        <input type="file" name="file" accept=".csv" class="form-control" />
+        <label for="file" class="form-label">Select CSV file</label>
+        <input type="file" id="file" name="file" accept=".csv" class="form-control" required />
+        <span class="text-danger d-block mt-2">@ViewBag.Error</span>
+        <small class="text-muted d-block mt-2">
+            CSV Format: Name, DateOfBirth (YYYY-MM-DD), Married (true/false), Phone, Salary
+        </small>
     </div>
 
-    <button type="submit" class="btn btn-primary">
-        Upload
-    </button>
+    <button type="submit" class="btn btn-primary">Upload</button>
+    <a asp-action="Index" class="btn btn-secondary">Back to List</a>
 </form>
-
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
